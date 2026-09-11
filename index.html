@@ -88,12 +88,20 @@ const startBtn = document.getElementById('startBtn');
 const hint = document.getElementById('hint');
 
 // ---- player sprite: replace this file (or the path) with any image you want ----
-const PLAYER_IMG_SRC = '45535-removebg-preview.png';
+const PLAYER_IMG_SRC = 'player.png';
 const playerImg = new Image();
 let playerImgReady = false;
 playerImg.onload = ()=> playerImgReady = true;
 playerImg.onerror = ()=> playerImgReady = false; // falls back to drawn circle
 playerImg.src = PLAYER_IMG_SRC;
+
+// ---- enemy sprite: replace this file (or the path) with any image you want ----
+const ENEMY_IMG_SRC = 'enemy.png';
+const enemyImg = new Image();
+let enemyImgReady = false;
+enemyImg.onload = ()=> enemyImgReady = true;
+enemyImg.onerror = ()=> enemyImgReady = false; // falls back to drawn circle
+enemyImg.src = ENEMY_IMG_SRC;
 
 let W, H, DPR;
 function resize(){
@@ -284,10 +292,15 @@ function draw(){
   // enemies
   enemies.forEach(e=>{
     ctx.save(); ctx.translate(e.x,e.y);
-    ctx.fillStyle='#5a2f3a'; ctx.strokeStyle='#ff5b3c'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(0,0,e.r,0,7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#ff5b3c';
-    ctx.beginPath(); ctx.arc(-4,-3,2,0,7); ctx.arc(4,-3,2,0,7); ctx.fill();
+    if(enemyImgReady){
+      const s=e.r*2.6;
+      ctx.drawImage(enemyImg,-s/2,-s/2,s,s);
+    } else {
+      ctx.fillStyle='#5a2f3a'; ctx.strokeStyle='#ff5b3c'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,e.r,0,7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#ff5b3c';
+      ctx.beginPath(); ctx.arc(-4,-3,2,0,7); ctx.arc(4,-3,2,0,7); ctx.fill();
+    }
     ctx.restore();
     if(e.hp<e.maxhp){
       ctx.fillStyle='#0008'; ctx.fillRect(e.x-e.r,e.y-e.r-7,e.r*2,3);
