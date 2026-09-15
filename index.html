@@ -94,7 +94,7 @@
   <p class="big">v4.0 — widescreen. Weapons. Combos. Chaos.</p>
   <p><b>Left thumb</b> move · <b>Right thumb</b> aim &amp; fire · <b>DASH</b> / <b>SWAP</b> buttons.<br>
      Chain kills fast to build a <b>combo multiplier</b>. Grab dropped guns and items.</p>
-  <p style="font-size:12px">Desktop: WASD · mouse · Shift dash · Q swap.</p>
+  <p style="font-size:12px">Desktop: WASD · mouse · Shift dash · Q swap. Starts in fullscreen.</p>
   <button id="startBtn">START</button>
 </div>
 
@@ -119,6 +119,24 @@ const enemyImg=new Image();let enemyImgReady=false;
 enemyImg.onload=()=>enemyImgReady=true;enemyImg.onerror=()=>enemyImgReady=false;enemyImg.src=ENEMY_IMG_SRC;
 
 const isTouch=('ontouchstart'in window)||navigator.maxTouchPoints>0;
+
+/* =========================================================
+   ★ PUT YOUR DIALOGUES HERE ★
+   Add 5–10 short lines below (keep each under ~40 characters
+   so it fits the speech bubble). One random line pops up over
+   the player every few seconds while you play. Edit freely.
+   ========================================================= */
+const DIALOGUES=[
+  "Peechay Toh Dekho",
+  "Pawri Ho Rahi Hai",
+  "Dil Ro Raha Hai Mera",
+  "Is Do Takkay Ki Larki Ke Liye...",
+  "Bag phenku kya? boom 💥"
+  // ,"Line 6" ,"Line 7" ...  up to 10
+];
+/* ========================================================= */
+let dialogue=null, dialogueTimer=0, nextDialogue=180;
+
 let W,H,DPR;
 function checkOrient(){rotateEl.style.display=(innerHeight>innerWidth&&isTouch)?'flex':'none';}
 function resize(){DPR=Math.min(devicePixelRatio||1,2);
@@ -154,6 +172,7 @@ function reset(){
   player={x:W/2,y:H/2,r:15,hp:100,maxhp:100,speed:3.8,angle:0,dash:100,dashing:0,flash:0};
   bullets=[];enemies=[];particles=[];drops=[];floaters=[];keys={};
   score=0;level=0;gameTime=0;lastShot=0;shake=0;rapid=0;dmgMul=1;reloadSpeed=1;combo=0;comboTimer=0;flashV=0;
+  dialogue=null;dialogueTimer=0;nextDialogue=180;
   makeStars();equip('pistol');startLevel();
 }
 function equip(g){gun=g;const w=WEAPONS[g];ammo=w.mag;reserve=w.ammo;reloading=false;reloadT=0;gunEl.textContent=w.name;updateHUD();}
@@ -242,6 +261,14 @@ function ring(x,y,c){for(let i=0;i<16;i++){const a=i/16*6.28,s=4;
 function update(){
   gameTime++;if(shake>0)shake*=0.85;if(rapid>0)rapid--;if(flashV>0)flashV*=0.9;
   if(comboTimer>0){comboTimer--;if(comboTimer===0){combo=0;comboEl.style.opacity=0;}}
+
+  // random dialogue
+  if(dialogueTimer>0){dialogueTimer--;if(dialogueTimer===0)dialogue=null;}
+  else if(DIALOGUES.length){nextDialogue--;if(nextDialogue<=0){
+    dialogue=DIALOGUES[Math.floor(Math.random()*DIALOGUES.length)];
+    dialogueTimer=150; // ~2.5s on screen
+    nextDialogue=180+Math.floor(Math.random()*240); // 3–7s until next
+  }}
 
   let mx=0,my=0;
   if(keys['w']||keys['arrowup'])my-=1;if(keys['s']||keys['arrowdown'])my+=1;
@@ -370,6 +397,27 @@ function draw(){
   floaters.forEach(f=>{ctx.globalAlpha=Math.max(0,f.life/40);ctx.fillStyle=f.c;ctx.font='bold 14px system-ui';
     ctx.textAlign='center';ctx.fillText(f.txt,f.x,f.y);ctx.textAlign='start';});ctx.globalAlpha=1;
 
+  // speech bubble
+  if(dialogue){
+    const fade=Math.min(1,dialogueTimer/25)*Math.min(1,(150-dialogueTimer)/8+0.3);
+    ctx.globalAlpha=Math.max(0,Math.min(1,fade));
+    ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+    const pad=10,tw=ctx.measureText(dialogue).width,bw=tw+pad*2,bh=26;
+    let bx=player.x, by=player.y-player.r-30;
+    bx=Math.max(bw/2+6,Math.min(W-bw/2-6,bx));
+    by=Math.max(bh/2+6,by);
+    ctx.fillStyle='#0e1420ee';ctx.strokeStyle='#3fe0d0';ctx.lineWidth=1.5;
+    const rx=bx-bw/2,ry=by-bh/2,rr=7;
+    ctx.beginPath();
+    ctx.moveTo(rx+rr,ry);ctx.arcTo(rx+bw,ry,rx+bw,ry+bh,rr);ctx.arcTo(rx+bw,ry+bh,rx,ry+bh,rr);
+    ctx.arcTo(rx,ry+bh,rx,ry,rr);ctx.arcTo(rx,ry,rx+bw,ry,rr);ctx.closePath();ctx.fill();ctx.stroke();
+    // tail toward player
+    ctx.beginPath();ctx.moveTo(bx-6,ry+bh);ctx.lineTo(bx+6,ry+bh);ctx.lineTo(bx,ry+bh+8);ctx.closePath();
+    ctx.fillStyle='#0e1420ee';ctx.fill();
+    ctx.fillStyle='#eef3f8';ctx.fillText(dialogue,bx,by+1);
+    ctx.textAlign='start';ctx.textBaseline='alphabetic';ctx.globalAlpha=1;
+  }
+
   ctx.restore();
 
   if(flashV>0.02){ctx.fillStyle='rgba(255,60,90,'+flashV+')';ctx.fillRect(0,0,W,H);}
@@ -387,9 +435,16 @@ function draw(){
 
 function loop(){if(!running)return;update();if(!running)return;draw();requestAnimationFrame(loop);}
 
+function goFullscreen(){
+  const el=document.documentElement;
+  const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
+  if(req){try{const p=req.call(el);if(p&&p.catch)p.catch(()=>{});}catch(e){}}
+  setTimeout(resize,300); // resize after browser bars collapse
+}
+document.addEventListener('fullscreenchange',()=>setTimeout(resize,150));
 function start(){reset();running=true;overlay.classList.add('hidden');
   hud.classList.remove('hidden');bars.classList.remove('hidden');gunBox.classList.remove('hidden');
-  if(!isTouch)hint.classList.remove('hidden');loop();}
+  if(!isTouch)hint.classList.remove('hidden');goFullscreen();loop();}
 
 function levelClear(){running=false;
   if(level>=LEVELS){hint.classList.add('hidden');
